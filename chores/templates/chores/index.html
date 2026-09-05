@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ChoreHarmony - Couples Chore Tracker</title>
+  <style>
+    :root {
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --partner-a: #ec4899;
+      --partner-b: #3b82f6;
+      --shared: #10b981;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 2rem 1rem;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    header h1 { font-size: 2rem; color: #0f172a; margin-bottom: 0.5rem; }
+    header p { color: var(--muted); }
+
+    /* Add Chore Form */
+    .add-chore-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+    }
+    .form-row {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+    input[type="text"], select {
+      padding: 0.75rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+    input[type="text"] { flex: 1; min-width: 240px; }
+    button {
+      cursor: pointer;
+      border: none;
+      border-radius: 8px;
+      padding: 0.75rem 1.25rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-done {
+      background: #e0e7ff;
+      color: #4338ca;
+      padding: 0.4rem 0.8rem;
+      font-size: 0.85rem;
+    }
+    .btn-done:hover { background: #c7d2fe; }
+    .btn-heart {
+      background: #ffe4e6;
+      color: #e11d48;
+      padding: 0.35rem 0.7rem;
+      font-size: 0.8rem;
+    }
+    .btn-heart:hover { background: #fecdd3; }
+
+    /* Columns layout */
+    .board-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2.5rem;
+    }
+    .column {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+    }
+    .col-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 0.75rem;
+      margin-bottom: 1rem;
+      border-bottom: 2px solid;
+    }
+    .col-partner-a { border-color: var(--partner-a); color: var(--partner-a); }
+    .col-partner-b { border-color: var(--partner-b); color: var(--partner-b); }
+    .col-shared { border-color: var(--shared); color: var(--shared); }
+    
+    .chore-list { list-style: none; display: flex; flex-direction: column; gap: 0.75rem; }
+    .chore-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.85rem;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    .empty-state {
+      color: var(--muted);
+      font-style: italic;
+      text-align: center;
+      padding: 1.5rem 0;
+    }
+
+    /* Activity Feed */
+    .activity-section {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+    }
+    .activity-section h2 { font-size: 1.25rem; margin-bottom: 1rem; }
+    .activity-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .activity-item:last-child { border-bottom: none; }
+    .badge-heart {
+      display: inline-block;
+      background: #ffe4e6;
+      color: #e11d48;
+      border-radius: 12px;
+      padding: 0.2rem 0.5rem;
+      font-size: 0.75rem;
+      margin-left: 0.5rem;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>👫 ChoreHarmony</h1>
+    <p>Household chore management for couples — transparent, fair, and appreciative.</p>
+  </header>
+
+  <!-- Add Chore -->
+  <section class="add-chore-card">
+    <form method="POST" action="{% url 'dashboard' %}" class="form-row">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="create">
+      <input type="text" name="title" placeholder="What chore needs doing? (e.g. Empty dishwasher)" required>
+      <select name="assigned_to">
+        <option value="">Shared Pool (Grab-bag)</option>
+        <option value="Partner A">Partner A</option>
+        <option value="Partner B">Partner B</option>
+      </select>
+      <button type="submit" class="btn-primary">+ Add Chore</button>
+    </form>
+  </section>
+
+  <!-- 3 Columns: Partner A, Partner B, Shared Pool -->
+  <main class="board-grid">
+    <!-- Partner A -->
+    <div class="column">
+      <div class="col-header col-partner-a">
+        <h2>Partner A</h2>
+        <span>{{ partner_a_chores.count }}</span>
+      </div>
+      <ul class="chore-list">
+        {% for chore in partner_a_chores %}
+          <li class="chore-item">
+            <span>{{ chore.title }}</span>
+            <form method="POST" action="{% url 'dashboard' %}">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="complete">
+              <input type="hidden" name="chore_id" value="{{ chore.id }}">
+              <input type="hidden" name="completed_by" value="Partner A">
+              <button type="submit" class="btn-done">✓ Done</button>
+            </form>
+          </li>
+        {% empty %}
+          <li class="empty-state">No active chores! 🎉</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <!-- Partner B -->
+    <div class="column">
+      <div class="col-header col-partner-b">
+        <h2>Partner B</h2>
+        <span>{{ partner_b_chores.count }}</span>
+      </div>
+      <ul class="chore-list">
+        {% for chore in partner_b_chores %}
+          <li class="chore-item">
+            <span>{{ chore.title }}</span>
+            <form method="POST" action="{% url 'dashboard' %}">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="complete">
+              <input type="hidden" name="chore_id" value="{{ chore.id }}">
+              <input type="hidden" name="completed_by" value="Partner B">
+              <button type="submit" class="btn-done">✓ Done</button>
+            </form>
+          </li>
+        {% empty %}
+          <li class="empty-state">No active chores! 🎉</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <!-- Shared Pool -->
+    <div class="column">
+      <div class="col-header col-shared">
+        <h2>Shared Pool 🧺</h2>
+        <span>{{ shared_chores.count }}</span>
+      </div>
+      <ul class="chore-list">
+        {% for chore in shared_chores %}
+          <li class="chore-item">
+            <span>{{ chore.title }}</span>
+            <div style="display: flex; gap: 0.35rem;">
+              <form method="POST" action="{% url 'dashboard' %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="complete">
+                <input type="hidden" name="chore_id" value="{{ chore.id }}">
+                <input type="hidden" name="completed_by" value="Partner A">
+                <button type="submit" class="btn-done">I did it (A)</button>
+              </form>
+              <form method="POST" action="{% url 'dashboard' %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="complete">
+                <input type="hidden" name="chore_id" value="{{ chore.id }}">
+                <input type="hidden" name="completed_by" value="Partner B">
+                <button type="submit" class="btn-done">I did it (B)</button>
+              </form>
+            </div>
+          </li>
+        {% empty %}
+          <li class="empty-state">All caught up! ✨</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </main>
+
+  <!-- Activity Feed with Thank You -->
+  <section class="activity-section">
+    <h2>🎉 Recently Completed & Appreciation Feed</h2>
+    {% if completed_chores %}
+      {% for chore in completed_chores %}
+        <div class="activity-item">
+          <div>
+            <strong>{{ chore.completed_by|default:"Someone" }}</strong> completed <em>"{{ chore.title }}"</em>
+            <span style="color: var(--muted); font-size: 0.85rem; margin-left: 0.5rem;">
+              ({{ chore.completed_at|date:"M d, H:i" }})
+            </span>
+            {% if chore.reactions.count > 0 %}
+              <span class="badge-heart">❤️ {{ chore.reactions.count }} Thank You</span>
+            {% endif %}
+          </div>
+          <form method="POST" action="{% url 'dashboard' %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="thank_you">
+            <input type="hidden" name="chore_id" value="{{ chore.id }}">
+            <input type="hidden" name="sender" value="Partner">
+            <button type="submit" class="btn-heart">❤️ Send Thank You!</button>
+          </form>
+        </div>
+      {% endfor %}
+    {% else %}
+      <p class="empty-state">No chores completed yet. Check one off above to see it here!</p>
+    {% endif %}
+  </section>
+
+</body>
+</html>
